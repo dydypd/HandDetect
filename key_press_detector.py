@@ -8,15 +8,19 @@ class KeyPressDetector:
         # Track previous finger positions for both hands
         self.prev_finger_positions = [None, None]  # Left and right hand
 
-        # Parameters for detection - make more sensitive
-        self.vertical_threshold = 10  # Minimum vertical movement to consider (pixels)
-        self.horizontal_threshold = 15  # Maximum horizontal movement allowed (pixels)
+        # Parameters for detection - make more sensitive for distant camera
+        self.vertical_threshold = 3  # Minimum vertical movement to consider (pixels)
+        self.horizontal_threshold = 20  # Maximum horizontal movement allowed (pixels)
 
         # State tracking for both hands
         self.is_pressing = False
         self.finger_pressing = [None, None]  # Which finger is pressing on each hand
         self.press_detected_time = None
         self.press_flash_duration = 0.2  # Show press indicator for only 0.2 seconds
+
+        # Add cooldown period to prevent multiple presses in short time
+        self.press_cooldown = 0.3  # Seconds to wait before detecting another press
+        self.last_press_time = 0  # Time of the last detected press
 
         # Add position history to detect slower movements (for both hands)
         self.position_history = [[], []]  # Left and right hand
@@ -118,10 +122,14 @@ class KeyPressDetector:
                     depth_ratio = (curr_y - ky1) / keyboard_height
 
                     # Only count as press if finger is deep enough into keyboard
-                    if depth_ratio > 0.3:  # At least 30% into keyboard depth
-                        self.is_pressing = True
-                        self.finger_pressing[hand_idx] = i
-                        self.press_detected_time = time.time()
+                    if depth_ratio > 0.25:  # Reduced from 0.3 to 0.25 (25% into keyboard depth)
+                        # Check cooldown period
+                        current_time = time.time()
+                        if current_time - self.last_press_time > self.press_cooldown:
+                            self.is_pressing = True
+                            self.finger_pressing[hand_idx] = i
+                            self.press_detected_time = current_time
+                            self.last_press_time = current_time
 
             # Update previous positions for this hand
             self.prev_finger_positions[hand_idx] = fingertip_positions
