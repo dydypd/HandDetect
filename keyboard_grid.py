@@ -110,18 +110,10 @@ class KeyboardGrid:
         for key, info in self.key_info.items():
             if info['bbox'] is not None:
                 bbox = info['bbox'].astype(int)
-                if info['detected']:
-                    color = (0, 255, 0)  # Xanh lá cho phím được phát hiện
-                elif info['interpolated']:
-                    color = (0, 255, 255)  # Vàng cho phím được nội suy
-                else:
-                    continue  # Bỏ qua các phím không có thông tin
-
-                # Vẽ bbox
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
-
-                # Vẽ tên phím
-                cv2.putText(frame, key, (bbox[0], bbox[1] - 5),
+                if info['detected'] or info['interpolated']:
+                    # Chỉ vẽ tên phím
+                    color = (0, 255, 0) if info['detected'] else (0, 255, 255)
+                    cv2.putText(frame, key, (bbox[0], bbox[1] + 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
         return frame
