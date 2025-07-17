@@ -3,4 +3,11 @@ mediapipe>=0.8.10
 numpy>=1.20.0
 ultralytics>=8.0.0
 torch>=1.7.0
+torchvision>=0.8.0
+scikit-learn>=0.24.0
+matplotlib>=3.3.0
+tkinter
+sounddevice>=0.4.0
+soundfile>=0.10.0
+scipy>=1.7.0
 

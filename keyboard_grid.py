@@ -11,11 +11,11 @@ class KeyboardGrid:
             # Hàng 2
             ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'backspace'],
             # Hàng 3
-            ['tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
+            ['tab', 'q', 'w', 'e', 'r', 't', 'z', 'u', 'i', 'o', 'p', '[', ']', '\\'],
             # Hàng 4
             ['caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'", 'enter'],
             # Hàng 5
-            ['shift-left', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'shift-right'],
+            ['shift-left', 'y', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'shift-right'],
             # Hàng 6
             ['strg-left', 'win', 'alt-left', 'space', 'altgr-right', 'menu', 'strg-right']
         ]

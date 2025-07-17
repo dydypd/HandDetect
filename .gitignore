@@ -1,0 +1,118 @@
+# Dataset và Training Data
+labeled_data/
+training_data/
+keyboard_data/
+recorded_videos/
+exported_models/
+models/
+
+# Model files
+*.pt
+*.pth
+*.h5
+*.tflite
+*.onnx
+best*.pt
+keypress*.pt
+final_*.pth
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+
+# Image files
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.gif
+
+# Audio files
+*.wav
+*.mp3
+*.flac
+*.aac
+
+# JSON data files (training data)
+training_data_*.json
+labels_*.json
+keypress_times_*.json
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Logs
+*.log
+logs/
+tensorboard_logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment files
+.env
+.venv
+env/
+venv/
+
+# Google credentials
+google_session.json
+*_credentials.json
+*_token.json
+
+# Large numpy arrays
+*.npy
+*.npz
+
+# Pickle files
+*.pkl
+*.pickle
+
+# CSV files with data
+*.csv
+training_log.csv
+
+# Backup files
+*.bak
+*.backup
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Specific large files that should be ignored
+sequences/
+augmented_data/
+processed_data/
+inference_results/
