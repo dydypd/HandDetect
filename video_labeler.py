@@ -6,8 +6,6 @@ from tkinter import messagebox, ttk, filedialog
 import json
 import os
 from datetime import datetime
-import threading
-import time
 
 class VideoLabeler:
     def __init__(self, model_path='best_v2.pt'):
