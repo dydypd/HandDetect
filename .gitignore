@@ -7,12 +7,12 @@ exported_models/
 models/
 
 # Model files
-*.pt
+# *.pt
 *.pth
 *.h5
 *.tflite
 *.onnx
-best*.pt
+# best*.pt
 keypress*.pt
 final_*.pth
 
