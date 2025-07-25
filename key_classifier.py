@@ -177,16 +177,56 @@ class KeyClassifier:
         else:
             raise ValueError(f"Model type {model_type} not supported yet")
             
-        # Load weights
-        self.model.load_state_dict(torch.load(model_path))
-        self.model.eval()
+        # Xác định device phù hợp
+        self.device = self._get_device()
+        print(f"Using device: {self.device}")
         
-        # Chuyển model sang CPU mode
-        self.device = torch.device('cpu')
+        # Load weights với device phù hợp
+        try:
+            # Thử load model weights với map_location tới device
+            state_dict = torch.load(model_path, map_location=self.device)
+            self.model.load_state_dict(state_dict)
+        except Exception as e:
+            print(f"Warning: Error loading model with GPU: {str(e)}")
+            print("Falling back to CPU...")
+            # Nếu lỗi, thử load lại với CPU
+            self.device = torch.device('cpu')
+            state_dict = torch.load(model_path, map_location=self.device)
+            self.model.load_state_dict(state_dict)
+            
+        # Chuyển model sang device phù hợp và chế độ eval
         self.model = self.model.to(self.device)
+        self.model.eval()
         
         # Class names
         self.class_names = ["No Press", "Key Press"]
+        
+    def _get_device(self):
+        """Xác định device tốt nhất để sử dụng."""
+        if torch.cuda.is_available():
+            # Kiểm tra xem có GPU nào khả dụng không
+            gpu_count = torch.cuda.device_count()
+            if gpu_count > 0:
+                # Lấy thông tin về GPU
+                for i in range(gpu_count):
+                    gpu_properties = torch.cuda.get_device_properties(i)
+                    print(f"Found GPU {i}: {gpu_properties.name} "
+                          f"({gpu_properties.total_memory / 1024**3:.1f}GB)")
+                
+                # Ưu tiên GPU có nhiều memory nhất
+                max_memory = 0
+                best_gpu = 0
+                for i in range(gpu_count):
+                    gpu_memory = torch.cuda.get_device_properties(i).total_memory
+                    if gpu_memory > max_memory:
+                        max_memory = gpu_memory
+                        best_gpu = i
+                
+                print(f"Selected GPU {best_gpu} as primary device")
+                return torch.device(f'cuda:{best_gpu}')
+        
+        print("No GPU available, using CPU")
+        return torch.device('cpu')
         
     def _load_model_info(self):
         """Load thông tin về các model từ file json."""
@@ -230,38 +270,50 @@ class KeyClassifier:
             # Thêm batch dimension cho CNN và ResNet
             image = np.expand_dims(image, 0)  # (1, C, H, W)
         
-        # Chuyển sang tensor
-        image = torch.FloatTensor(image)
+        # Chuyển sang tensor và đưa lên device phù hợp
+        image = torch.FloatTensor(image).to(self.device)
         return image
         
     def predict(self, image):
         """Dự đoán trạng thái của phím."""
-        # Tiền xử lý ảnh
-        image_tensor = self.preprocess_image(image)
-        image_tensor = image_tensor.to(self.device)
-        
-        # Thực hiện dự đoán
-        with torch.no_grad():
-            outputs = self.model(image_tensor)
+        try:
+            # Tiền xử lý ảnh
+            image_tensor = self.preprocess_image(image)
             
-            # Xử lý kết quả dựa trên loại model
-            if self.model_type == 'cnn_lstm':
-                # CNN_LSTM trả về kết quả cho sequence, lấy kết quả cuối cùng
-                probabilities = torch.nn.functional.softmax(outputs[:, -1] if len(outputs.shape) > 2 else outputs, dim=1)
-            else:
-                # CNN và ResNet trả về kết quả trực tiếp
-                probabilities = torch.nn.functional.softmax(outputs, dim=1)
+            # Thực hiện dự đoán
+            with torch.no_grad():
+                outputs = self.model(image_tensor)
                 
-            predicted_class = torch.argmax(probabilities, dim=1).item()
-            confidence = probabilities[0][predicted_class].item()
+                # Xử lý kết quả dựa trên loại model
+                if self.model_type == 'cnn_lstm':
+                    # CNN_LSTM trả về kết quả cho sequence, lấy kết quả cuối cùng
+                    probabilities = torch.nn.functional.softmax(outputs[:, -1] if len(outputs.shape) > 2 else outputs, dim=1)
+                else:
+                    # CNN và ResNet trả về kết quả trực tiếp
+                    probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                    
+                predicted_class = torch.argmax(probabilities, dim=1).item()
+                confidence = probabilities[0][predicted_class].item()
+                
+            return {
+                'class_name': self.class_names[predicted_class],
+                'class_id': predicted_class,
+                'confidence': confidence * 100,  # Chuyển sang phần trăm
+                'model_type': self.model_type,
+                'model_accuracy': self.get_model_accuracy(),
+                'device': str(self.device)
+            }
             
-        return {
-            'class_name': self.class_names[predicted_class],
-            'class_id': predicted_class,
-            'confidence': confidence * 100,  # Chuyển sang phần trăm
-            'model_type': self.model_type,
-            'model_accuracy': self.get_model_accuracy()
-        }
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                print(f"GPU out of memory error: {str(e)}")
+                print("Falling back to CPU...")
+                # Chuyển sang CPU và thử lại
+                self.device = torch.device('cpu')
+                self.model = self.model.to(self.device)
+                return self.predict(image)
+            else:
+                raise e
 
     @staticmethod
     def get_available_models():
