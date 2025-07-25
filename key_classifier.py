@@ -212,10 +212,24 @@ class KeyClassifier:
             
         # Chuẩn hóa ảnh về dạng tensor
         image = image.astype(np.float32) / 255.0
+        
+        # Chuẩn hóa theo ImageNet mean và std (như trong data transforms)
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
+        image = (image - mean) / std
+        
         # Chuyển từ HWC sang CHW format
         image = np.transpose(image, (2, 0, 1))
-        # Thêm batch dimension
-        image = np.expand_dims(image, 0)
+        
+        # Xử lý dựa trên loại model
+        if self.model_type == 'cnn_lstm':
+            # Thêm sequence dimension
+            image = np.expand_dims(image, 0)  # (1, C, H, W)
+            image = np.expand_dims(image, 0)  # (1, 1, C, H, W) - batch, sequence, channels, height, width
+        else:
+            # Thêm batch dimension cho CNN và ResNet
+            image = np.expand_dims(image, 0)  # (1, C, H, W)
+        
         # Chuyển sang tensor
         image = torch.FloatTensor(image)
         return image
@@ -229,7 +243,15 @@ class KeyClassifier:
         # Thực hiện dự đoán
         with torch.no_grad():
             outputs = self.model(image_tensor)
-            probabilities = torch.nn.functional.softmax(outputs, dim=1)
+            
+            # Xử lý kết quả dựa trên loại model
+            if self.model_type == 'cnn_lstm':
+                # CNN_LSTM trả về kết quả cho sequence, lấy kết quả cuối cùng
+                probabilities = torch.nn.functional.softmax(outputs[:, -1] if len(outputs.shape) > 2 else outputs, dim=1)
+            else:
+                # CNN và ResNet trả về kết quả trực tiếp
+                probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                
             predicted_class = torch.argmax(probabilities, dim=1).item()
             confidence = probabilities[0][predicted_class].item()
             
