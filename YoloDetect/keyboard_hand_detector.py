@@ -38,8 +38,8 @@ def transform_coordinates(x, y, angle, image_width, image_height):
 
 def main():
     # Khởi tạo các thành phần
-    keyboard_model = YOLO('best_v2.pt')  # Model phát hiện bàn phím
-    keypress_model = YOLO('best (1).pt')  # Model phát hiện trạng thái bấm phím
+    keyboard_model = YOLO('../best_v2.pt')  # Model phát hiện bàn phím
+    keypress_model = YOLO('../best (1).pt')  # Model phát hiện trạng thái bấm phím
     keyboard_grid = KeyboardGrid()
     # Khởi tạo KeyInputTracker với các tham số phù hợp
     key_input_tracker = KeyInputTracker(
