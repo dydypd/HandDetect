@@ -24,6 +24,11 @@ class VideoLabeler:
         self.expanded_bbox = None
         self.key_roi = None
         
+        # Video display
+        self.video_window_name = "Video Display"
+        cv2.namedWindow(self.video_window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(self.video_window_name, 800, 600)
+        
         # Classifiers
         self.available_models = KeyClassifier.get_available_models()
         self.classifiers = {}
@@ -64,7 +69,7 @@ class VideoLabeler:
         """Setup the GUI interface."""
         self.root = tk.Tk()
         self.root.title(f"Video Labeler - Key '{self.target_key}'")
-        self.root.geometry("1200x800")
+        self.root.geometry("800x600")
         
         # Main frame
         main_frame = ttk.Frame(self.root)
@@ -188,10 +193,6 @@ class VideoLabeler:
             # Prediction results
             self.prediction_label = ttk.Label(control_frame, text="No prediction yet")
             self.prediction_label.pack(side=tk.LEFT, padx=(10, 0))
-            
-        # Canvas for video display
-        self.canvas = tk.Canvas(main_frame, bg="black", height=400)
-        self.canvas.pack(fill=tk.BOTH, expand=True)
         
         # Key bindings
         self.root.bind('<Key-0>', lambda e: self.label_frame(0))
@@ -200,8 +201,18 @@ class VideoLabeler:
         self.root.bind('<Right>', lambda e: self.next_frame())
         self.root.bind('<space>', lambda e: self.toggle_play())
         self.root.bind('<Delete>', lambda e: self.remove_label())
+        self.root.bind('<Escape>', lambda e: self.cleanup())
+        self.root.protocol("WM_DELETE_WINDOW", self.cleanup)
         self.root.focus_set()
-        
+
+    def cleanup(self, event=None):
+        """Cleanup resources before closing."""
+        if self.cap:
+            self.cap.release()
+        cv2.destroyAllWindows()
+        self.root.quit()
+        self.root.destroy()
+
     def select_video(self):
         """Select video file."""
         filetypes = [
@@ -332,6 +343,7 @@ class VideoLabeler:
         
         if ret:
             self.current_frame = frame.copy()
+            display_frame = frame.copy()
             
             # Dự đoán nếu đang ở chế độ auto predict
             if self.auto_predict:
@@ -345,12 +357,12 @@ class VideoLabeler:
                     # Màu xanh cho "pressed", đỏ cho "not pressed"
                     color = (0, 255, 0) if self.prediction_result['class_id'] == 1 else (0, 0, 255)
                     confidence = self.prediction_result['confidence']
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                    cv2.putText(frame, f"Key {self.target_key}: {self.prediction_result['class_name']} ({confidence:.1f}%)", 
+                    cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(display_frame, f"Key {self.target_key}: {self.prediction_result['class_name']} ({confidence:.1f}%)", 
                               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
                 else:
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(frame, f"Key {self.target_key}", (x1, y1-10), 
+                    cv2.rectangle(display_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(display_frame, f"Key {self.target_key}", (x1, y1-10), 
                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             
             # Show current label status
@@ -364,11 +376,11 @@ class VideoLabeler:
                     label_text = "NOT PRESSED"
                     label_color = (0, 0, 255)
             
-            cv2.putText(frame, label_text, (10, 30), 
+            cv2.putText(display_frame, label_text, (10, 30), 
                        cv2.FONT_HERSHEY_SIMPLEX, 1, label_color, 2)
             
-            # Display frame
-            self.display_frame(frame)
+            # Display frame in separate window
+            cv2.imshow(self.video_window_name, display_frame)
             
             # Update UI
             self.frame_info.config(text=f"Frame: {self.current_frame_idx} / {self.total_frames-1}")
@@ -385,38 +397,24 @@ class VideoLabeler:
                     f"({self.prediction_result['confidence']:.2f}%)"
                 )
                 self.prediction_label.config(text=prediction_text)
-            
-    def display_frame(self, frame):
-        """Display frame on canvas."""
-        # Resize frame to fit canvas
-        canvas_width = self.canvas.winfo_width()
-        canvas_height = self.canvas.winfo_height()
-        
-        if canvas_width > 1 and canvas_height > 1:
-            # Calculate scale to fit
-            scale_x = canvas_width / frame.shape[1]
-            scale_y = canvas_height / frame.shape[0]
-            scale = min(scale_x, scale_y)
-            
-            new_width = int(frame.shape[1] * scale)
-            new_height = int(frame.shape[0] * scale)
-            
-            resized_frame = cv2.resize(frame, (new_width, new_height))
-            
-            # Convert to RGB for tkinter
-            rgb_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
-            
-            # Convert to PhotoImage
-            from PIL import Image, ImageTk
-            pil_image = Image.fromarray(rgb_frame)
-            self.photo = ImageTk.PhotoImage(pil_image)
-            
-            # Clear canvas and display image
-            self.canvas.delete("all")
-            x = (canvas_width - new_width) // 2
-            y = (canvas_height - new_height) // 2
-            self.canvas.create_image(x, y, anchor=tk.NW, image=self.photo)
-            
+
+            # Process OpenCV window key events
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27:  # ESC key
+                self.cleanup()
+            elif key == ord('0'):
+                self.label_frame(0)
+            elif key == ord('1'):
+                self.label_frame(1)
+            elif key == ord(' '):
+                self.toggle_play()
+            elif key == 83 or key == ord('d'):  # Right arrow or 'd'
+                self.next_frame()
+            elif key == 81 or key == ord('a'):  # Left arrow or 'a'
+                self.prev_frame()
+            elif key == ord('r'):
+                self.remove_label()
+
     def prev_frame(self):
         """Go to previous frame."""
         if self.current_frame_idx > 0:
